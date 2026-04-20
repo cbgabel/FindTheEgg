@@ -30,7 +30,8 @@ namespace FindTheEgg2
         Paused,
         HighScores,
         EnteringName,
-        GameOver
+        GameOver,
+        Victory
     }
 
     public enum PowerUpType
@@ -164,6 +165,13 @@ namespace FindTheEgg2
                 case GameState.GameOver:
                     if (ks.IsKeyDown(Keys.Space) && _prevKeyboard.IsKeyUp(Keys.Space))
                         _state = GameState.MainMenu;
+                    break;
+                case GameState.Victory:
+                    if (ks.IsKeyDown(Keys.Space) && _prevKeyboard.IsKeyUp(Keys.Space))
+                    {
+                        _playerNameInput = "";
+                        _state = GameState.EnteringName;
+                    }
                     break;
             }
 
@@ -309,7 +317,14 @@ namespace FindTheEgg2
             if (_playerPos == _eggPos)
             {
                 _score += 100;
-                StartNewRound();
+                if (_currentRound >= 100)
+                {
+                    _state = GameState.Victory;
+                }
+                else
+                {
+                    StartNewRound();
+                }
                 return;
             }
 
@@ -379,7 +394,7 @@ namespace FindTheEgg2
             do
             {
                 _map = new int[GridWidth, GridHeight];
-                int rockCount = 280 + (_currentRound * 12);
+                int rockCount = 280 + (Math.Min(_currentRound, 50) * 12);
                 for (int i = 0; i < rockCount; i++)
                 {
                     int x = _rnd.Next(GridWidth);
@@ -460,6 +475,9 @@ namespace FindTheEgg2
                     break;
                 case GameState.GameOver:
                     DrawGameOver();
+                    break;
+                case GameState.Victory:
+                    DrawVictory();
                     break;
             }
 
@@ -640,6 +658,63 @@ namespace FindTheEgg2
             _spriteBatch.DrawString(_font, "GAME OVER", new Vector2(ScreenWidth / 2 - _font.MeasureString("GAME OVER").X / 2, 220), Color.Red);
             _spriteBatch.DrawString(_font, $"FINAL SCORE: {_score}", new Vector2(ScreenWidth / 2 - _font.MeasureString($"FINAL SCORE: {_score}").X / 2, 300), Color.White);
             _spriteBatch.DrawString(_font, "PRESS SPACE TO RETURN TO MENU", new Vector2(ScreenWidth / 2 - _font.MeasureString("PRESS SPACE TO RETURN TO MENU").X / 2, 400), Color.White);
+        }
+
+        private void DrawVictory()
+        {
+            string caption = "The Egg Has Been Found";
+            Vector2 captionPos = new Vector2(ScreenWidth / 2 - _font.MeasureString(caption).X / 2, 60);
+            _spriteBatch.DrawString(_font, caption, captionPos, Color.Gold);
+            int centerX = ScreenWidth / 2;
+            int centerY = 340;
+            DrawCrownedEgg(centerX, centerY, 7);
+            string scoreText = $"SCORE {_score}   ROUND {_currentRound}";
+            Vector2 scorePos = new Vector2(ScreenWidth / 2 - _font.MeasureString(scoreText).X / 2, 580);
+            _spriteBatch.DrawString(_font, scoreText, scorePos, Color.White);
+            string instruction = "PRESS SPACE TO ENTER YOUR NAME";
+            Vector2 instrPos = new Vector2(ScreenWidth / 2 - _font.MeasureString(instruction).X / 2, 680);
+            _spriteBatch.DrawString(_font, instruction, instrPos, Color.Lime);
+        }
+
+        private void DrawCrownedEgg(int centerX, int centerY, int scale)
+        {
+            int w = 16 * scale;
+            int h = 24 * scale;
+            Color eggColor = new Color(255, 235, 180);
+            for (int y = -h / 2; y <= h / 2; y++)
+            {
+                float t = (float)y / (h / 2f);
+                int width = (int)(w * (0.75f - 0.25f * t * t));
+                int left = centerX - width / 2;
+                DrawRect(new Rectangle(left, centerY + y, width, 1), eggColor);
+            }
+            Color outline = new Color(180, 160, 80);
+            for (int y = -h / 2 - 1; y <= h / 2 + 1; y += 3)
+            {
+                float t = (float)y / (h / 2f);
+                int width = (int)(w * (0.75f - 0.25f * t * t));
+                int left = centerX - width / 2;
+                DrawRect(new Rectangle(left - 2, centerY + y, width + 4, 3), outline);
+            }
+            int crownY = centerY - h / 2 - scale * 4;
+            int crownW = w * 3 / 4;
+            Color crownColor = new Color(255, 215, 0);
+            DrawRect(new Rectangle(centerX - crownW / 2, crownY, crownW, scale * 3), crownColor);
+            int[] offsets = { -crownW / 2 + 8, -crownW / 4, 0, crownW / 4, crownW / 2 - 8 };
+            for (int i = 0; i < 5; i++)
+            {
+                int sx = centerX + offsets[i];
+                int sw = scale * 3;
+                for (int sy = 0; sy < scale * 7; sy += 2)
+                {
+                    int cw = (int)(sw * (1.0f - (float)sy / (scale * 7)));
+                    DrawRect(new Rectangle(sx - cw / 2, crownY - sy - scale * 2, cw, 3), crownColor);
+                }
+            }
+            Color jewel = Color.OrangeRed;
+            DrawRect(new Rectangle(centerX - 6, crownY - scale * 6, 12, 8), jewel);
+            DrawRect(new Rectangle(centerX - crownW / 2 + 4, crownY - 2, 6, 8), jewel);
+            DrawRect(new Rectangle(centerX + crownW / 2 - 10, crownY - 2, 6, 8), jewel);
         }
 
         private void DrawRect(Rectangle rect, Color color)
